@@ -1,0 +1,12 @@
+{
+  "name": "pm-resume-analyzer",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev:frontend": "node api.js && npm run dev --workspace=frontend",
+    "dev:backend": "node api.js && npm run dev --workspace=backend"
+  }
+}
