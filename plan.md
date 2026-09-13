@@ -1,56 +1,38 @@
-# Project Plan — Resume Analyzer (MVP)
+# Project Plan — PM Resume Analyzer (MVP)
 
-Intentionally small in scope: the goal is a real, working, end-to-end slice rather than a fully
-featured product on day one. Once this MVP is solid, later rounds can expand it (multiple resume
-formats, richer scoring, account history, PM-specific competency scoring, etc.).
+A small, focused tool: score a resume against a job description, with a differentiator built in
+from round 1 — project-management-specific competency detection, not just generic keyword match.
 
 ## Tech stack
 
-- **Frontend:** React + Vite, plain CSS (no component library needed at this size).
-- **Backend:** Node.js + Express, single service.
-- **Storage:** None required for the MVP — resumes are analyzed in-memory per request, nothing
-  persisted. (A database can be added later if history/accounts become in scope.)
-- **Resume parsing:** `pdf-parse` for PDF text extraction (plain-text resumes accepted as-is).
+- **Frontend:** React + Vite.
+- **Backend:** Node.js + Express, single service, no database (stateless per request).
+- **Parsing:** `pdf-parse` for PDF text; plain-text paste also accepted.
 
-## High-level architecture
+## Architecture
 
-A single-page frontend lets a user paste or upload a resume and paste a job description. It POSTs
-both to a backend `/analyze` endpoint. The backend extracts resume text (if a PDF was uploaded),
-runs a keyword-overlap comparison against the job description, and returns a match score plus
-both the matched and missing keywords. The frontend renders the score and both keyword lists.
+Frontend POSTs resume + job description to `/analyze`. Backend extracts resume text, runs generic
+keyword-overlap scoring against the JD, and separately flags PM-specific signals in the resume
+(certifications, tools, competencies). Frontend renders both the generic score and the PM-specific
+flags.
 
-## Major features / epics
+## Features (small, three total)
 
-1. **Resume input & text extraction** — upload a PDF or paste plain text; backend normalizes both
-   into plain text for analysis.
-   - Accepted input: `.pdf` (max 5MB) or pasted plain text (max 20,000 characters).
-   - A corrupt or scanned/image-only PDF (no extractable text) returns a 422 with a clear error
-     ("couldn't read text from this PDF — try pasting the text instead") rather than a silent
-     empty analysis.
-2. **Keyword match & scoring** — extract meaningful keywords from the job description, compare
-   against the resume text, and compute a percentage match score.
-   - Extraction: lowercase, tokenize on non-word characters, strip a standard English stopword
-     list, then take the top 25 remaining words from the job description by frequency as the
-     "meaningful keywords" set.
-   - Scoring: `matchScore = (matchedKeywords.length / totalKeywords.length) * 100`, rounded to the
-     nearest whole percent. `matchedKeywords` = keywords present (case-insensitive, substring
-     match) anywhere in the resume text.
-   - Keyword extraction is implemented as its own pluggable module (`extractKeywords(text)`) so a
-     future round can swap in a domain-specific dictionary (e.g. project-management/analyst
-     competencies — budget tracking, stakeholder management, PMP/CAPM/Agile certifications) as a
-     planned differentiator, without reworking the scoring logic itself.
-   - Edge cases: an empty/whitespace-only job description returns a 400 ("job description is
-     required"); a resume with zero keyword overlap still returns a valid response with
-     `matchScore: 0` and the full keyword list as "missing" — not treated as an error.
-3. **Results display** — show the match score and both matched and missing keywords.
-   - Score rendered as both a percentage number and a simple progress bar.
-   - Two lists below it: "Keywords found" and "Keywords missing" — showing what's already covered,
-     not just what's absent, so the results are actionable either way.
+1. **Resume input & extraction** — `.pdf` (5MB max) or pasted text (20k chars max). Unreadable/
+   scanned PDF → 422 with a clear message. Empty JD → 400.
+2. **Generic keyword scoring** — tokenize + stopword-strip the JD, take top 25 by frequency,
+   substring-match against resume text, score = `matched / total * 100`. Zero overlap is a valid
+   0% result, not an error.
+3. **PM-competency detection (the differentiator)** — a fixed, small keyword dictionary of PM
+   signals (certifications: PMP, CAPM, Agile/Scrum; tools: Jira, MS Project, Asana; competencies:
+   budget tracking, stakeholder management, risk management). Scanned against the resume
+   independently of the JD-match score, and shown as a separate "PM signals found" list — this is
+   what makes the tool worth using over a generic keyword-match clone, and it's built now, not
+   deferred.
 
 ## Open questions / assumptions
 
-- No user accounts or saved history in this round — every analysis is a one-off, stateless request.
-- Assuming resumes and job descriptions are in English for the MVP.
-- The domain-specific (e.g. PM-competency) keyword dictionary mentioned above is explicitly
-  deferred to a later round — this round only needs `extractKeywords` to be swappable, not the
-  dictionary itself built.
+- English-only for the MVP.
+- No accounts/history — stateless, one-off analysis per request.
+- The PM-competency dictionary is intentionally small and fixed for this round; expanding it is a
+  natural next round, not a blocker to shipping this one.
