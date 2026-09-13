@@ -1,0 +1,8 @@
+{
+  "name": "backend",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "echo \"backend not scaffolded yet — see the next ticket\" && exit 0"
+  }
+}
